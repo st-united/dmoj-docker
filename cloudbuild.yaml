@@ -1,0 +1,137 @@
+substitutions:
+  _LOCATION: asia-southeast1
+  _REPOSITORY: dmoj
+  _VERSION: 1.0.0
+
+# https://cloud.google.com/build/docs/cloud-builders
+# https://github.com/GoogleCloudPlatform/cloud-builders/tree/master
+steps:
+  - name: gcr.io/cloud-builders/git
+    args:
+      - submodule
+      - update
+      - --init
+      - --recursive
+    id: fetch_submodule
+  - name: gcr.io/cloud-builders/git
+    script: ./scripts/initialize
+    dir: dmoj
+    waitFor: [fetch_submodule]
+    id: initialize
+
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - buildx
+      - build
+      - --platform
+      - linux/amd64
+      - --load
+      - -f
+      - ./texoid/Dockerfile
+      - -t
+      - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-texoid:${_VERSION}
+      - .
+    dir: dmoj
+    waitFor: ['-']
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - buildx
+      - build
+      - --platform
+      - linux/amd64
+      - --load
+      - -f
+      - ./pdfoid/Dockerfile
+      - -t
+      - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-pdfoid:${_VERSION}
+      - .
+    dir: dmoj
+    waitFor: ['-']
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - buildx
+      - build
+      - --platform
+      - linux/amd64
+      - --load
+      - -f
+      - ./mathoid/Dockerfile
+      - -t
+      - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-mathoid:${_VERSION}
+      - .
+    dir: dmoj
+    waitFor: ['-']
+
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - buildx
+      - build
+      - --platform
+      - linux/amd64
+      - --load
+      - -f
+      - ./mathoid/Dockerfile
+      - -t
+      - ninjaclasher/dmoj-base:latest
+      - .
+    dir: dmoj
+    id: base
+    waitFor: ['initialize']
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - buildx
+      - build
+      - --platform
+      - linux/amd64
+      - --load
+      - -f
+      - ./site/Dockerfile
+      - -t
+      - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-site:${_VERSION}
+      - .
+    dir: dmoj
+    waitFor: ['base']
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - buildx
+      - build
+      - --platform
+      - linux/amd64
+      - --load
+      - -f
+      - ./celery/Dockerfile
+      - -t
+      - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-celery:${_VERSION}
+      - .
+    dir: dmoj
+    waitFor: ['base']
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - buildx
+      - build
+      - --platform
+      - linux/amd64
+      - --load
+      - -f
+      - ./bridged/Dockerfile
+      - -t
+      - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-bridged:${_VERSION}
+      - .
+    dir: dmoj
+    waitFor: ['base']
+
+options:
+  machineType: UNSPECIFIED
+  diskSizeGb: 70
+  automapSubstitutions: true
+timeout: 3600s
+images:
+  - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-texoid:${_VERSION}
+  - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-pdfoid:${_VERSION}
+  - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-mathoid:${_VERSION}
+  - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-site:${_VERSION}
+  - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-celery:${_VERSION}
+  - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-bridged:${_VERSION}
