@@ -1,4 +1,2 @@
 build:
-	gcloud builds submit \
-		--async \
-		--config=cloudbuild.yaml
+	gcloud builds submit --async
