@@ -14,7 +14,8 @@ steps:
       - --recursive
     id: fetch_submodule
   - name: gcr.io/cloud-builders/git
-    script: ./scripts/initialize
+    entrypoint: bash
+    args: [./scripts/initialize]
     dir: dmoj
     waitFor: [fetch_submodule]
     id: initialize
@@ -33,6 +34,7 @@ steps:
       - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-texoid:${_VERSION}
       - .
     dir: dmoj
+    id: texoid
     waitFor: ['-']
   - name: gcr.io/cloud-builders/docker
     args:
@@ -47,6 +49,7 @@ steps:
       - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-pdfoid:${_VERSION}
       - .
     dir: dmoj
+    id: pdfoid
     waitFor: ['-']
   - name: gcr.io/cloud-builders/docker
     args:
@@ -61,6 +64,7 @@ steps:
       - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-mathoid:${_VERSION}
       - .
     dir: dmoj
+    id: mathoid
     waitFor: ['-']
 
 
@@ -93,6 +97,7 @@ steps:
       - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-site:${_VERSION}
       - .
     dir: dmoj
+    id: site
     waitFor: ['base']
   - name: gcr.io/cloud-builders/docker
     args:
@@ -107,6 +112,7 @@ steps:
       - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-celery:${_VERSION}
       - .
     dir: dmoj
+    id: celery
     waitFor: ['base']
   - name: gcr.io/cloud-builders/docker
     args:
@@ -121,7 +127,24 @@ steps:
       - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-bridged:${_VERSION}
       - .
     dir: dmoj
+    id: bridged
     waitFor: ['base']
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - buildx
+      - build
+      - --platform
+      - linux/amd64
+      - --load
+      - -f
+      - ./wsevent/Dockerfile
+      - -t
+      - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-wsevent:${_VERSION}
+      - .
+    dir: dmoj
+    id: wsevent
+    waitFor: ['initialize']
 
 options:
   machineType: UNSPECIFIED
@@ -135,3 +158,4 @@ images:
   - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-site:${_VERSION}
   - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-celery:${_VERSION}
   - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-bridged:${_VERSION}
+  - ${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/dmoj-wsevent:${_VERSION}
